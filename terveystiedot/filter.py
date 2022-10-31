@@ -2,6 +2,7 @@
 
 import csv
 from pathlib import Path
+import re
 
 
 def read_data(location: str) -> tuple:
@@ -10,31 +11,18 @@ def read_data(location: str) -> tuple:
     with open(location, encoding="latin-1") as file:
         reader = csv.reader(file, delimiter=";")
 
-        field_names = None
-        data_rows = []
-        faulty_data_rows = []
+        field_names: str = ";".join(next(reader))[3:]   # read first row of column names without id field
+        data_rows: list[str] = []
+        faulty_data_rows: list[str] = []
 
         for row in reader:
-            row = [e.replace(",", ".") for e in row]
             row = row[1:] # remove id column
-            try:
-                if reader.line_num == 1:
-                    field_names = row
-                elif (int(row[1]) in [0,1]          # 0 or 1
-                    and int(row[2]) in range(1,11)  # from one to ten
-                    and len(row[3]) == 3            # decimal with precision of 1
-                    and int(row[5]) in range(101)   # 0-100
-                    and row[7] in ["M","N"]         # m or n
-                    and len(row) == 8):
+            row = ";".join(row) # convert to str
 
-                    for i in range(7):
-                        if not row[i].isdigit():    # check if value is float or int.
-                            float(row[i])
-
-                    data_rows.append(row)
-                else:
-                    faulty_data_rows.append(row)
-            except ValueError:
+            pattern = re.compile(r"^(\d+);[01];(\d|10);(\d,\d);(\d+);(\d\d|10);(\d+);[MN]$")
+            if re.match(pattern, row):  # match with regex
+                data_rows.append(row)
+            else:
                 faulty_data_rows.append(row)
 
         return (field_names, data_rows, faulty_data_rows)
@@ -44,15 +32,14 @@ def write_data(location: str, data: list, field_names: list) -> None:
     """write data to file"""
 
     with open(location, "w", encoding="latin-1") as file:
-        file.write(";".join(field_names) + "\n")
+        file.write(field_names + "\n")
 
         for entry in data:
-            file.write(";".join(entry) + "\n")
+            file.write(entry + "\n")
 
 
 PATH = Path(__file__).parent / "data"
 FILE_NAME = "Terveys_v3.csv"
-print(PATH)
 
 f_names, f_data, faulty = read_data(f"{PATH}/{FILE_NAME}")
 
