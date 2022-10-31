@@ -11,16 +11,20 @@ def read_data(location: str) -> tuple:
     with open(location, encoding="latin-1") as file:
         reader = csv.reader(file, delimiter=";")
 
-        field_names: str = ";".join(next(reader))[3:]   # read first row of column names without id field
+        field_names: str = ",".join(next(reader))[3:]   # read first row of column names without id field
         data_rows: list[str] = []
         faulty_data_rows: list[str] = []
 
         for row in reader:
             row = row[1:] # remove id column
             row = ";".join(row) # convert to str
+            row = row.replace(",", ".")
+            row = row.replace(";", ",")
 
-            pattern = re.compile(r"^(\d+);[01];(\d|10);(\d,\d);(\d+);(\d\d|10);(\d+);[MN]$")
+            pattern = re.compile(r"^([1-5]?\d\d),[01],([1-9]|10),((\d+[.]\d)|\d),(\d+),(\d\d?|100),(\d+),([MN]|Mies|Nainen)$")
             if re.match(pattern, row):  # match with regex
+                row = row.replace("Mies", "M")
+                row = row.replace("Nainen", "N")
                 data_rows.append(row)
             else:
                 faulty_data_rows.append(row)
